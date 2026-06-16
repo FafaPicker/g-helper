@@ -874,6 +874,9 @@ namespace GHelper
                 contextMenuStrip.Items.Add("-");
             }
 
+            AddAudioDeviceSection(contextMenuStrip, Properties.Strings.AudioOutput, GHelper.Helpers.AudioDevices.ListOutput, padding);
+            AddAudioDeviceSection(contextMenuStrip, Properties.Strings.AudioInput, GHelper.Helpers.AudioDevices.ListInput, padding);
+
             var bwIcon = new ToolStripMenuItem(Properties.Strings.BWTrayIcon);
             bwIcon.Margin = padding;
             bwIcon.Checked = AppConfig.IsBWIcon();
@@ -913,6 +916,45 @@ namespace GHelper
             if (Program.trayIcon is not null) Program.trayIcon.ContextMenuStrip = contextMenuStrip;
 
 
+        }
+
+        // Adds an Output/Input device section to the tray menu: a disabled header,
+        // one radio-style entry per active device (checked == current default),
+        // and a trailing separator. The menu is rebuilt on click so the check
+        // mark follows the change immediately, matching how Performance/GPU do it.
+        private void AddAudioDeviceSection(ContextMenuStrip menu, string title, Func<List<GHelper.Helpers.AudioDevices.Device>> listDevices, Padding padding)
+        {
+            var header = new ToolStripMenuItem(title);
+            header.Margin = padding;
+            header.Enabled = false;
+            menu.Items.Add(header);
+
+            var devices = listDevices();
+            if (devices.Count == 0)
+            {
+                var none = new ToolStripMenuItem("(no devices)");
+                none.Margin = padding;
+                none.Enabled = false;
+                menu.Items.Add(none);
+            }
+            else
+            {
+                foreach (var dev in devices)
+                {
+                    var item = new ToolStripMenuItem(dev.Name);
+                    item.Margin = padding;
+                    item.Checked = dev.IsDefault;
+                    string id = dev.Id;
+                    item.Click += (sender, args) =>
+                    {
+                        GHelper.Helpers.AudioDevices.SetDefault(id);
+                        SetContextMenu();
+                    };
+                    menu.Items.Add(item);
+                }
+            }
+
+            menu.Items.Add("-");
         }
 
         public void InitContextMenuTheme()

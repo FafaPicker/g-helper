@@ -120,6 +120,12 @@
   <data name="Acceleration" xml:space="preserve">
     <value>Acceleration</value>
   </data>
+  <data name="AudioInput" xml:space="preserve">
+    <value>Input</value>
+  </data>
+  <data name="AudioOutput" xml:space="preserve">
+    <value>Output</value>
+  </data>
   <data name="ACPIError" xml:space="preserve">
     <value>Can't connect to ASUS ACPI. Application can't function without it. Try to install Asus System Control Interface</value>
   </data>

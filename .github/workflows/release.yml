@@ -44,14 +44,29 @@ jobs:
     - name: Create ZIP from signed EXE
       run: powershell Compress-Archive ./signed/GHelper.exe ./signed/GHelper.zip
 
-    - name: Upload signed EXE and ZIP
+    - name: Build installer from signed EXE
+      shell: pwsh
+      run: |
+        # The .iss expects the exe at the publish path; stage the signed copy there
+        # so the same script works both locally (dotnet publish) and in CI (signed).
+        $dst = 'app/bin/x64/Release/net8.0-windows/win-x64/publish'
+        New-Item -ItemType Directory -Force -Path $dst | Out-Null
+        Copy-Item ./signed/GHelper.exe -Destination $dst -Force
+        choco install innosetup -y --no-progress
+        $iscc = Get-ChildItem 'C:\Program Files*\Inno Setup*\ISCC.exe' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+        if (-not $iscc) { throw 'ISCC.exe not found - Inno Setup install failed' }
+        & $iscc installer/GHelper.iss
+        Write-Host "Installer built: $(Resolve-Path installer/Output/GHelperSetup.exe)"
+
+    - name: Upload signed EXE, ZIP and installer
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        gh release upload "${{ github.event.release.tag_name }}" ./signed/GHelper.exe ./signed/GHelper.zip --clobber
+        gh release upload "${{ github.event.release.tag_name }}" ./signed/GHelper.exe ./signed/GHelper.zip ./installer/Output/GHelperSetup.exe --clobber
     - name: Generate SLSA build provenance attestation
       uses: actions/attest-build-provenance@v2
       with:
         subject-path: |
           ./signed/GHelper.exe
           ./signed/GHelper.zip
+          ./installer/Output/GHelperSetup.exe

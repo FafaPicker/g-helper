@@ -637,6 +637,16 @@ namespace GHelper
         private void SettingsForm_LostFocus(object? sender, EventArgs e)
         {
             lastLostFocus = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+            // 焦点离开整个窗口组（主面板 + 所有子窗口）时自动隐藏到托盘。
+            // 用 BeginInvoke 延迟到消息泵下一轮：Deactivate 触发时，
+            // 即将获得焦点的新窗口（如刚点开的 Fans 子窗口）尚未拿到焦点，
+            // 直接检查 HasAnyFocus 会误判为「无焦点」而错误隐藏。
+            BeginInvoke(new Action(() =>
+            {
+                if (!IsDisposed && Visible && !HasAnyFocus())
+                    HideAll();
+            }));
         }
 
         private void ButtonBatteryFull_Click(object? sender, EventArgs e)

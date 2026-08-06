@@ -17,8 +17,8 @@
 ;  Startup" checkbox). Adding a registry Run-key here would double-launch.
 ; ---------------------------------------------------------------------------
 
-#define GHelperVersion      "0.257"
-#define PublishDir          "..\app\bin\x64\Release\net8.0-windows\win-x64\publish"
+#define GHelperVersion      "0.271"
+#define PublishDir          "..\app\bin\x64\Release\net10.0-windows\win-x64\publish"
 
 [Setup]
 ; Stable per-app GUID so upgrades replace in place (do NOT change between versions).

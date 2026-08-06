@@ -1,6 +1,6 @@
 # G-Helper - Lightweight control tool for Asus laptops
 
-Small and lightweight Armoury Crate alternative for Asus laptops offering almost same functionality with a much smaller footprint. Works with all popular models, such as ROG Zephyrus G14, G15, G16, M16, Flow X13, Flow X16, Flow Z13, DUO, TUF Series, Strix or Scar Series, ProArt, Vivobook, Zenbook, Expertbook, ROG Ally or Ally X and many more!
+Small and lightweight Armoury Crate alternative for Asus laptops offering almost same functionality with a much smaller footprint. Works with all popular models, such as ROG Zephyrus G14, G15, G16, M16, X13, X16, Z13, DUO, TUF Series, Strix or Scar Series, ProArt, Vivobook, Zenbook, Expertbook, ROG Ally or Ally X and many more!
 
 [![GitHub release](https://g-helper.com/badge/release.svg)](https://GitHub.com/seerge/g-helper/releases/)
 [![Downloads](https://g-helper.com/badge/downloads.svg)](https://GitHub.com/seerge/g-helper/releases/)
@@ -22,6 +22,7 @@ Small and lightweight Armoury Crate alternative for Asus laptops offering almost
 - [Troubleshooting](https://github.com/seerge/g-helper/wiki/Troubleshooting)
 - [Power User Settings](https://github.com/seerge/g-helper/wiki/Power-user-settings)
 
+[![seerge/g-helper downloads](https://release-monitor.com/chart/seerge/g-helper.svg?range=month&stable=3)](https://release-monitor.com/#/seerge/g-helper)
 
 [![United24](https://github.com/user-attachments/assets/aa9444e3-9daa-4b88-a473-7a7f855e3a07)](https://u24.gov.ua/)
 
@@ -107,7 +108,7 @@ A built-in in-game overlay (OSD) that shows live **FPS, CPU / GPU temperatures, 
 
 - ``Ctrl + Shift + Alt + O`` - Toggle in-game overlay ON / OFF
 - ``Ctrl + Shift + Alt + Mouse Drag`` - Move overlay
-- ``Ctrl + Shift + Alt + Mouse Click`` - Switch mode (Light / Default / Full)
+- ``Ctrl + Shift + Alt + Mouse Click`` - Switch mode (Light / Default / Full / Complete)
 - ``Ctrl + Shift + Alt + Wheel`` - Resize overlay
 - ``Ctrl + Shift + Alt + Wheel Click`` - Reset overlay size
 

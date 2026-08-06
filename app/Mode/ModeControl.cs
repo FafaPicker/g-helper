@@ -47,6 +47,7 @@ namespace GHelper.Mode
         static System.Timers.Timer? reapplyTimer;
         static System.Timers.Timer modeToggleTimer = default!;
         static CancellationTokenSource _modeCts = new();
+        static Task _modeTask = Task.CompletedTask;
 
         public ModeControl()
         {
@@ -83,6 +84,11 @@ namespace GHelper.Mode
             SetRyzenPower();
         }
 
+        public void WaitForApply()
+        {
+            try { _modeTask.Wait(5000); } catch { }
+        }
+
         public void AutoPerformance(bool powerChanged = false)
         {
             int mode = AppConfig.Get("performance_" + Program.PerformanceKey());
@@ -99,7 +105,7 @@ namespace GHelper.Mode
         {
             ResetRyzen();
 
-            Program.acpi.DeviceSet(AsusACPI.PerformanceMode, Modes.GetCurrentBase(), "Mode");
+            Program.acpi.SetPerformanceMode(Modes.GetCurrentBase());
 
             // Default power mode
             AppConfig.RemoveMode("powermode");
@@ -128,7 +134,7 @@ namespace GHelper.Mode
             _modeCts = new CancellationTokenSource();
             var ct = _modeCts.Token;
 
-            Task.Run(async () =>
+            _modeTask = Task.Run(async () =>
             {
                 try
                 {
@@ -149,9 +155,7 @@ namespace GHelper.Mode
                     ct.ThrowIfCancellationRequested();
 
                     if (AppConfig.Is("status_mode")) Program.acpi.DeviceSet(AsusACPI.StatusMode, [0x00, Modes.GetBase(mode) == AsusACPI.PerformanceSilent ? (byte)0x02 : (byte)0x03], "StatusMode");
-                    int status = Program.acpi.DeviceSet(AsusACPI.PerformanceMode, AppConfig.IsManualModeRequired() ? AsusACPI.PerformanceManual : Modes.GetBase(mode), "Mode");
-                    // Vivobook fallback
-                    if (status != 1) Program.acpi.SetVivoMode(Modes.GetBase(mode));
+                    Program.acpi.SetPerformanceMode(AppConfig.IsManualModeRequired() ? AsusACPI.PerformanceManual : Modes.GetBase(mode));
 
                     SetGPUClocks();
 
@@ -165,12 +169,16 @@ namespace GHelper.Mode
                     var command = AppConfig.GetModeString("mode_command");
                     if (command is not null)
                     {   Logger.WriteLine("Running mode command: " + command);
-                        RestrictedProcessHelper.RunAsRestrictedUser(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "cmd.exe"), "/C " + command);
+                        RestrictedProcessHelper.RunAsRestrictedUser(command);
                     }
                 }
                 catch (OperationCanceledException)
                 {
                     Logger.WriteLine($"SetPerformanceMode cancelled (mode {mode})");
+                }
+                catch (Exception ex)
+                {
+                    Logger.WriteLine($"SetPerformanceMode failed (mode {mode}): {ex.Message}");
                 }
             }, ct);
 
@@ -185,6 +193,7 @@ namespace GHelper.Mode
                     PowerNative.SetPowerMode(Modes.GetBase(mode));
 
                 if (AppConfig.IsAutoASPM()) PowerNative.SetBalancedASPM();
+                if (AppConfig.IsAutoStandbyNetworking()) PowerNative.SetConnectivityInStandby();
             }
 
             // CPU Boost setting override

@@ -36,14 +36,14 @@ namespace GHelper.Helpers
         uint SetProcessingPeriod([MarshalAs(UnmanagedType.LPWStr)] string deviceId, ref long pPeriod);
         uint GetShareMode([MarshalAs(UnmanagedType.LPWStr)] string deviceId, ref uint pMode);
         uint SetShareMode([MarshalAs(UnmanagedType.LPWStr)] string deviceId, ref uint pMode);
-        uint GetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string deviceId, ref PropertyKey key, IntPtr pv);
-        uint SetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string deviceId, ref PropertyKey key, IntPtr pv);
+        uint GetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string deviceId, ref PolicyConfigPropertyKey key, IntPtr pv);
+        uint SetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string deviceId, ref PolicyConfigPropertyKey key, IntPtr pv);
         [PreserveSig] uint SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string deviceId, PolicyConfigRole role);
         uint SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string deviceId, int bVisible);
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct PropertyKey
+    internal struct PolicyConfigPropertyKey
     {
         public Guid fmtid;
         public int pid;

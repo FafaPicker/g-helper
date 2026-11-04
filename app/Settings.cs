@@ -64,6 +64,7 @@ namespace GHelper
         {
 
             InitializeComponent();
+            InitializeAutoGameMode();
             InitTheme(true);
 
             gpuControl = new GPUModeControl(this);
@@ -865,7 +866,7 @@ namespace GHelper
                 menuMode.Tag = mode.Key;
                 menuMode.Click += (sender, args) => { Program.modeControl.SetPerformanceMode(mode.Key); };
                 menuMode.Margin = padding;
-                menuMode.Checked = (mode.Key == currentMode);
+                menuMode.Checked = Program.autoGameMode?.Enabled != true && mode.Key == currentMode;
                 contextMenuStrip.Items.Add(menuMode);
             }
 
@@ -1591,7 +1592,8 @@ namespace GHelper
         /// <returns>Focus state</returns>
         public bool HasAnyFocus(bool lostFocusCheck = false)
         {
-            return (fansForm != null && fansForm.ContainsFocus) ||
+            return (gameListForm != null && gameListForm.ContainsFocus) ||
+                   (fansForm != null && fansForm.ContainsFocus) ||
                    (extraForm != null && extraForm.ContainsFocus) ||
                    (updatesForm != null && updatesForm.ContainsFocus) ||
                    (matrixForm != null && matrixForm.ContainsFocus) ||
@@ -1757,19 +1759,20 @@ namespace GHelper
             buttonTurbo.Activated = false;
             buttonFans.Activated = false;
 
+            bool autoGameMode = VisualiseAutoGameMode();
             switch (mode)
             {
                 case AsusACPI.PerformanceSilent:
-                    buttonSilent.Activated = true;
+                    buttonSilent.Activated = !autoGameMode;
                     break;
                 case AsusACPI.PerformanceTurbo:
-                    buttonTurbo.Activated = true;
+                    buttonTurbo.Activated = !autoGameMode;
                     break;
                 case AsusACPI.PerformanceBalanced:
-                    buttonBalanced.Activated = true;
+                    buttonBalanced.Activated = !autoGameMode;
                     break;
                 default:
-                    buttonFans.Activated = true;
+                    buttonFans.Activated = !autoGameMode;
                     buttonFans.BorderColor = Modes.GetBase(mode) switch
                     {
                         AsusACPI.PerformanceSilent => colorEco,
@@ -1784,7 +1787,7 @@ namespace GHelper
             {
                 if (item is ToolStripMenuItem menuItem && menuItem.Tag is not null)
                 {
-                    menuItem.Checked = ((int)menuItem.Tag == mode);
+                    menuItem.Checked = !autoGameMode && (int)menuItem.Tag == mode;
                 }
             }
         }

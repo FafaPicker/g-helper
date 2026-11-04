@@ -25,6 +25,7 @@ namespace GHelper
 
         public static SettingsForm settingsForm;
 
+        internal static AutoGameMode.AutoGameModeController? autoGameMode;
         public static ModeControl modeControl;
         public static GPUModeControl gpuControl;
         public static AllyControl allyControl;
@@ -221,6 +222,9 @@ namespace GHelper
 
             if (AppConfig.IsOverlay())
                 hardwareOverlay?.StartOverlay();
+
+            autoGameMode = new AutoGameMode.AutoGameModeController(settingsForm);
+            if (AppConfig.Is("auto_game_mode")) autoGameMode.Enable();
 
             Application.ApplicationExit += OnExit;
             Application.Run();
@@ -468,6 +472,7 @@ namespace GHelper
 
         static void OnExit(object sender, EventArgs e)
         {
+            autoGameMode?.Dispose();
             if (trayIcon is not null)
             {
                 trayIcon.Visible = false;

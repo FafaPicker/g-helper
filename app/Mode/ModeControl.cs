@@ -91,6 +91,12 @@ namespace GHelper.Mode
 
         public void AutoPerformance(bool powerChanged = false)
         {
+            if (Program.autoGameMode?.Enabled == true)
+            {
+                Program.autoGameMode.Refresh(reapply: true);
+                return;
+            }
+
             int mode = AppConfig.Get("performance_" + Program.PerformanceKey());
             Logger.WriteLine($"{Program.currentSource} Performance Mode: {Modes.GetName(mode == -1 ? Modes.GetCurrent() : mode)}");
 
@@ -117,8 +123,9 @@ namespace GHelper.Mode
             Program.toast.RunToast(Modes.GetCurrentName(), SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online ? ToastIcon.Charger : ToastIcon.Battery);
         }
 
-        public void SetPerformanceMode(int mode = -1, bool notify = false)
+        public void SetPerformanceMode(int mode = -1, bool notify = false, bool fromGameAutomation = false)
         {
+            if (mode >= 0 && !fromGameAutomation) Program.autoGameMode?.Disable();
 
             int oldMode = Modes.GetCurrent();
             if (mode < 0) mode = oldMode;
@@ -214,6 +221,7 @@ namespace GHelper.Mode
 
         public void CyclePerformanceMode(bool back = false)
         {
+            Program.autoGameMode?.Disable();
             int delay = AppConfig.Get("mode_delay", 1000);
 
             if (modeToggleTimer is null)

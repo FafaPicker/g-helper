@@ -1,5 +1,6 @@
 using GHelper.UI;
 using System.ComponentModel;
+using System.Globalization;
 
 namespace GHelper.AutoGameMode;
 
@@ -8,6 +9,8 @@ internal sealed class GameListForm : RForm
     private readonly BindingList<GameEntry> games;
     private readonly DataGridView grid = new();
     private readonly AutoGameModeController controller;
+    private readonly StringComparer gameNameComparer = StringComparer.Create(CultureInfo.GetCultureInfo("zh-CN"), true);
+    private bool sorting;
 
     public GameListForm(AutoGameModeController controller)
     {
@@ -17,10 +20,11 @@ internal sealed class GameListForm : RForm
         {
             Enabled = game.Enabled,
             Name = game.Name,
-            ExecutablePath = game.ExecutablePath
+            ExecutablePath = game.ExecutablePath,
+            PerformanceMode = game.PerformanceMode
         }).ToList());
 
-        Text = "自动模式 · 游戏列表";
+        Text = "自动模式 · 游戏规则";
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(760, 420);
         MinimumSize = new Size(640, 360);
@@ -33,7 +37,7 @@ internal sealed class GameListForm : RForm
         layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         layout.Controls.Add(new Label
         {
-            Text = "勾选需要增强模式的游戏。请选择实际游戏进程；LOL 请在进入对局后添加，勿选客户端或启动器。",
+            Text = "切换方式：按游戏指定档位。请选择实际游戏进程；LOL 请在进入对局后添加，勿选客户端或启动器。\n无游戏运行时静音；多游戏取最高档。升档立即执行，降档等待 5 秒。",
             AutoSize = true,
             MaximumSize = new Size(720, 0),
             Margin = new Padding(0, 0, 0, 10)
@@ -48,12 +52,35 @@ internal sealed class GameListForm : RForm
         grid.MultiSelect = false;
         grid.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = "Enabled", HeaderText = "启用", MinimumWidth = 100, AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Name", HeaderText = "游戏", AutoSizeMode = DataGridViewAutoSizeColumnMode.DisplayedCells });
+        grid.Columns.Add(new DataGridViewComboBoxColumn
+        {
+            DataPropertyName = nameof(GameEntry.PerformanceMode), HeaderText = "运行时档位",
+            DataSource = new[]
+            {
+                new { Value = GamePerformanceMode.Silent, Text = "静音" },
+                new { Value = GamePerformanceMode.Balanced, Text = "平衡" },
+                new { Value = GamePerformanceMode.Turbo, Text = "增强" }
+            },
+            ValueMember = "Value", DisplayMember = "Text",
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
+            DisplayStyle = DataGridViewComboBoxDisplayStyle.DropDownButton
+        });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             DataPropertyName = "ExecutablePath", HeaderText = "实际游戏程序路径",
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, ReadOnly = true
         });
+        foreach (DataGridViewColumn column in grid.Columns)
+            column.SortMode = DataGridViewColumnSortMode.NotSortable;
         grid.DataSource = games;
+        // Reorder only after editing ends, so the active dropdown/text editor stays attached to its row.
+        grid.CurrentCellDirtyStateChanged += (_, _) =>
+        {
+            if (grid.IsCurrentCellDirty && grid.CurrentCell is DataGridViewCheckBoxCell or DataGridViewComboBoxCell)
+                grid.CommitEdit(DataGridViewDataErrorContexts.Commit);
+        };
+        grid.CellEndEdit += (_, _) => BeginInvoke((Action)SortGames);
+        SortGames();
         layout.Controls.Add(grid, 0, 1);
 
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, Margin = new Padding(0, 10, 0, 0) };
@@ -92,6 +119,7 @@ internal sealed class GameListForm : RForm
         save.Click += (_, _) =>
         {
             grid.EndEdit();
+            SortGames();
             controller.SaveGames(games.ToList());
             DialogResult = DialogResult.OK;
             Close();
@@ -106,6 +134,33 @@ internal sealed class GameListForm : RForm
         grid.BackgroundColor = formBack;
         grid.DefaultCellStyle.BackColor = buttonMain;
         grid.DefaultCellStyle.ForeColor = foreMain;
+    }
+
+    private void SortGames()
+    {
+        if (IsDisposed || Disposing || sorting) return;
+        var selected = grid.CurrentRow?.DataBoundItem as GameEntry;
+        int columnIndex = grid.CurrentCell?.ColumnIndex ?? 0;
+        var sorted = games.OrderBy(game => game.PerformanceMode.GetPriority())
+            .ThenBy(game => game.Name, gameNameComparer)
+            .ThenBy(game => game.ExecutablePath, StringComparer.OrdinalIgnoreCase).ToList();
+        if (games.SequenceEqual(sorted)) return;
+        sorting = true;
+        try
+        {
+            games.RaiseListChangedEvents = false;
+            games.Clear();
+            foreach (var game in sorted) games.Add(game);
+            games.RaiseListChangedEvents = true;
+            games.ResetBindings();
+            if (selected != null && games.Contains(selected))
+                grid.CurrentCell = grid.Rows[games.IndexOf(selected)].Cells[columnIndex];
+        }
+        finally
+        {
+            games.RaiseListChangedEvents = true;
+            sorting = false;
+        }
     }
 
     private void AddGame(GameEntry game)
@@ -124,6 +179,7 @@ internal sealed class GameListForm : RForm
             return;
         }
         games.Add(game);
+        SortGames();
     }
 
     private GameEntry? SelectRunningGame()

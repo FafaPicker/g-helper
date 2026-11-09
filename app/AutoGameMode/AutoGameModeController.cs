@@ -11,6 +11,7 @@ internal sealed class AutoGameModeController : IDisposable
 {
     private readonly SettingsForm settings;
     private readonly GameModeState state = new();
+    private readonly IGameModePolicy policy = new PerGameModePolicy();
     private readonly GameProcessTracker processTracker = new();
     private readonly System.Windows.Forms.Timer exitTimer = new() { Interval = 5000 };
     private ManagementEventWatcher? startWatcher;
@@ -137,24 +138,25 @@ internal sealed class AutoGameModeController : IDisposable
             return;
         }
         if (!Enabled || disposed) return;
-        bool? hasRunningGame = HasRunningGame();
-        if (hasRunningGame == null)
+        var runningGames = GetRunningGames();
+        if (runningGames == null)
         {
             Fail("无法读取同名游戏进程的完整路径。请确认 GHelper 有权限访问该进程。");
             return;
         }
-        bool? useTurbo = state.Evaluate(hasRunningGame.Value, DateTimeOffset.UtcNow, immediate);
-        if (useTurbo == null)
+        var currentMode = (GamePerformanceMode)Modes.GetCurrentBase();
+        var targetMode = state.Evaluate(policy.Evaluate(runningGames), currentMode, DateTimeOffset.UtcNow, immediate);
+        if (targetMode == null)
         {
             exitTimer.Stop();
-            exitTimer.Interval = Math.Max(1, (int)Math.Ceiling((state.QuietAt.Value - DateTimeOffset.UtcNow).TotalMilliseconds));
+            exitTimer.Interval = Math.Max(1, (int)Math.Ceiling((state.SwitchAt.Value - DateTimeOffset.UtcNow).TotalMilliseconds));
             exitTimer.Start();
             if (!reapply) return;
-            useTurbo = Modes.GetCurrentBase() == AsusACPI.PerformanceTurbo;
+            targetMode = currentMode;
         }
 
-        if (state.QuietAt == null || useTurbo == false) exitTimer.Stop();
-        int mode = useTurbo.Value ? AsusACPI.PerformanceTurbo : AsusACPI.PerformanceSilent;
+        if (state.SwitchAt == null) exitTimer.Stop();
+        int mode = (int)targetMode.Value;
         if (reapply || Modes.GetCurrent() != mode)
         {
             Logger.WriteLine("Auto game mode: " + Modes.GetName(mode));
@@ -163,15 +165,15 @@ internal sealed class AutoGameModeController : IDisposable
         else settings.ShowMode(mode);
     }
 
-    private bool? HasRunningGame()
+    private List<GameEntry>? GetRunningGames()
     {
         bool unreadableProcess = false;
+        var runningGames = new List<GameEntry>();
         foreach (var group in Games.Where(game => game.Enabled && !GameEntry.IsLauncher(game.ExecutablePath))
             .GroupBy(game => game.ProcessName, StringComparer.OrdinalIgnoreCase))
         {
             if (string.IsNullOrEmpty(group.Key)) continue;
             var processes = Process.GetProcessesByName(group.Key);
-            bool matched = false;
             foreach (var process in processes)
             {
                 bool retained = false;
@@ -179,9 +181,10 @@ internal sealed class AutoGameModeController : IDisposable
                 {
                     if (process.HasExited || process.SessionId != sessionId) continue;
                     string path = GameProcessPath.Read(process);
-                    if (!group.Any(game => string.Equals(game.ExecutablePath, path, StringComparison.OrdinalIgnoreCase))) continue;
+                    var matches = group.Where(game => string.Equals(game.ExecutablePath, path, StringComparison.OrdinalIgnoreCase)).ToList();
+                    if (matches.Count == 0) continue;
                     retained = processTracker.Track(process);
-                    matched = true;
+                    runningGames.AddRange(matches);
                 }
                 catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or NotSupportedException)
                 {
@@ -196,9 +199,9 @@ internal sealed class AutoGameModeController : IDisposable
                     if (!retained) process.Dispose();
                 }
             }
-            if (matched) return true;
         }
-        return unreadableProcess ? null : false;
+        // An unreadable process could require a higher profile than the games already identified.
+        return unreadableProcess ? null : runningGames;
     }
 
     private void Fail(string message)

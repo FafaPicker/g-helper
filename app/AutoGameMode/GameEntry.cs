@@ -9,6 +9,15 @@ internal sealed class GameEntry
     public bool Enabled { get; set; } = true;
     public string Name { get; set; } = "";
     public string ExecutablePath { get; set; } = "";
+    private GamePerformanceMode performanceMode = GamePerformanceMode.Turbo;
+
+    // Entries saved before per-game profiles existed retain their previous Turbo behavior.
+    public GamePerformanceMode PerformanceMode
+    {
+        get => performanceMode;
+        set => performanceMode = value is GamePerformanceMode.Silent or GamePerformanceMode.Balanced or GamePerformanceMode.Turbo
+            ? value : GamePerformanceMode.Turbo;
+    }
 
     [JsonIgnore]
     public string ProcessName => Path.GetFileNameWithoutExtension(ExecutablePath);

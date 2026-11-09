@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../app/AutoGameMode/GameModeState.cs" Link="GameModeState.cs" />
+    <Compile Include="../../app/AutoGameMode/GameModePolicy.cs" Link="GameModePolicy.cs" />
     <Compile Include="../../app/AutoGameMode/GameEntry.cs" Link="GameEntry.cs" />
     <Compile Include="../../app/AutoGameMode/GameProcessPath.cs" Link="GameProcessPath.cs" />
     <Compile Include="../../app/AutoGameMode/GameProcessTracker.cs" Link="GameProcessTracker.cs" />

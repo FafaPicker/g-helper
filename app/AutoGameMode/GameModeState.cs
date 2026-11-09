@@ -2,19 +2,31 @@ namespace GHelper.AutoGameMode;
 
 internal sealed class GameModeState
 {
-    public DateTimeOffset? QuietAt { get; private set; }
+    public DateTimeOffset? SwitchAt { get; private set; }
+    private GamePerformanceMode? pendingMode;
 
-    public bool? Evaluate(bool hasRunningGames, DateTimeOffset now, bool immediate = false)
+    public GamePerformanceMode? Evaluate(GamePerformanceMode targetMode, GamePerformanceMode currentMode,
+        DateTimeOffset now, bool immediate = false)
     {
-        if (hasRunningGames || immediate)
+        if (immediate || targetMode.GetPriority() >= currentMode.GetPriority())
         {
-            QuietAt = null;
-            return hasRunningGames;
+            Reset();
+            return targetMode;
         }
 
-        QuietAt ??= now.AddSeconds(5);
-        return now >= QuietAt.Value ? false : null;
+        if (pendingMode != targetMode)
+        {
+            pendingMode = targetMode;
+            SwitchAt = now.AddSeconds(5);
+        }
+        if (now < SwitchAt.Value) return null;
+        Reset();
+        return targetMode;
     }
 
-    public void Reset() => QuietAt = null;
+    public void Reset()
+    {
+        SwitchAt = null;
+        pendingMode = null;
+    }
 }

@@ -68,7 +68,25 @@ namespace GHelper.Properties {
                 return ResourceManager.GetString("Acceleration", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to Input.
+        /// </summary>
+        internal static string AudioInput {
+            get {
+                return ResourceManager.GetString("AudioInput", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Output.
+        /// </summary>
+        internal static string AudioOutput {
+            get {
+                return ResourceManager.GetString("AudioOutput", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Can&apos;t connect to ASUS ACPI. Application can&apos;t function without it. Try to install Asus System Control Interface.
         /// </summary>

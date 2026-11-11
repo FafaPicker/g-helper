@@ -569,6 +569,7 @@ namespace GHelper
             {
                 handheldForm = new Handheld();
                 AddOwnedForm(handheldForm);
+                handheldForm.Deactivate += (_, _) => CheckAutoHide();
             }
 
             if (handheldForm.Visible)
@@ -652,6 +653,27 @@ namespace GHelper
         private void SettingsForm_LostFocus(object? sender, EventArgs e)
         {
             lastLostFocus = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            CheckAutoHide();
+        }
+
+        /// <summary>
+        /// 焦点离开整个窗口组（主面板 + 所有子窗口）时自动隐藏到托盘。
+        /// 主面板与每个子窗口的 Deactivate 都会调到这里：当子窗口（如 Fans/Extra）
+        /// 打开时主面板已 Deactivate，之后子窗口再失焦不会再触发主面板的
+        /// Deactivate，所以必须也监听子窗口的 Deactivate 才能捕获「子窗口
+        /// 打开 → 点别处」这一路径。
+        /// 用 BeginInvoke 延迟到消息泵下一轮：Deactivate 触发时，即将获得焦点
+        /// 的新窗口（如刚点开的另一个子窗口）尚未拿到焦点，直接检查
+        /// HasAnyFocus 会误判为「无焦点」而错误隐藏。
+        /// </summary>
+        private void CheckAutoHide()
+        {
+            if (IsDisposed) return;
+            BeginInvoke(new Action(() =>
+            {
+                if (!IsDisposed && Visible && !HasAnyFocus())
+                    HideAll();
+            }));
         }
 
         private void ButtonBatteryFull_Click(object? sender, EventArgs e)
@@ -732,6 +754,7 @@ namespace GHelper
             {
                 updatesForm = new Updates();
                 AddOwnedForm(updatesForm);
+                updatesForm.Deactivate += (_, _) => CheckAutoHide();
             }
 
             if (updatesForm.Visible)
@@ -907,6 +930,9 @@ namespace GHelper
                 contextMenuStrip.Items.Add("-");
             }
 
+            AddAudioDeviceSection(contextMenuStrip, Properties.Strings.AudioOutput, GHelper.Helpers.AudioDevices.ListOutput, padding);
+            AddAudioDeviceSection(contextMenuStrip, Properties.Strings.AudioInput, GHelper.Helpers.AudioDevices.ListInput, padding);
+
             var bwIcon = new ToolStripMenuItem(Properties.Strings.BWTrayIcon);
             bwIcon.Margin = padding;
             bwIcon.Checked = AppConfig.IsBWIcon();
@@ -946,6 +972,45 @@ namespace GHelper
             if (Program.trayIcon is not null) Program.trayIcon.ContextMenuStrip = contextMenuStrip;
 
 
+        }
+
+        // Adds an Output/Input device section to the tray menu: a disabled header,
+        // one radio-style entry per active device (checked == current default),
+        // and a trailing separator. The menu is rebuilt on click so the check
+        // mark follows the change immediately, matching how Performance/GPU do it.
+        private void AddAudioDeviceSection(ContextMenuStrip menu, string title, Func<List<GHelper.Helpers.AudioDevices.Device>> listDevices, Padding padding)
+        {
+            var header = new ToolStripMenuItem(title);
+            header.Margin = padding;
+            header.Enabled = false;
+            menu.Items.Add(header);
+
+            var devices = listDevices();
+            if (devices.Count == 0)
+            {
+                var none = new ToolStripMenuItem("(no devices)");
+                none.Margin = padding;
+                none.Enabled = false;
+                menu.Items.Add(none);
+            }
+            else
+            {
+                foreach (var dev in devices)
+                {
+                    var item = new ToolStripMenuItem(dev.Name);
+                    item.Margin = padding;
+                    item.Checked = dev.IsDefault;
+                    string id = dev.Id;
+                    item.Click += (sender, args) =>
+                    {
+                        GHelper.Helpers.AudioDevices.SetDefault(id);
+                        SetContextMenu();
+                    };
+                    menu.Items.Add(item);
+                }
+            }
+
+            menu.Items.Add("-");
         }
 
         public void InitContextMenuTheme()
@@ -1101,6 +1166,7 @@ namespace GHelper
             {
                 matrixForm = new Matrix();
                 AddOwnedForm(matrixForm);
+                matrixForm.Deactivate += (_, _) => CheckAutoHide();
             }
 
             if (matrixForm.Visible)
@@ -1160,6 +1226,7 @@ namespace GHelper
             {
                 extraForm = new Extra();
                 AddOwnedForm(extraForm);
+                extraForm.Deactivate += (_, _) => CheckAutoHide();
             }
 
             if (extraForm.Visible)
@@ -1190,6 +1257,7 @@ namespace GHelper
             {
                 fansForm = new Fans();
                 AddOwnedForm(fansForm);
+                fansForm.Deactivate += (_, _) => CheckAutoHide();
             }
 
             if (fansForm.Visible)
